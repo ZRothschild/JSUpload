@@ -18,6 +18,8 @@ Route::get('/', function () {
 Route::namespace('FrontEnd')->group(function () {
     Route::get('/test/sendEmail', 'TestController@sendEmail');
     Route::get('/test/sendEmailOne', 'TestController@sendEmailOne');
+    Route::post('/test/upLoad', 'TestController@upLoad');
+    Route::get('/test/testRedis', 'TestController@testRedis');
 });
 
 
