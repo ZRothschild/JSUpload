@@ -6,6 +6,7 @@ use App\Events\TestEmailEvent;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendEmailJob;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 
 class TestController extends Controller
@@ -39,22 +40,25 @@ class TestController extends Controller
         dump(11111111223334);
     }
 
+
     public function upLoad(Request $request)
     {
         try{
-
-            $img = file_get_contents('php://input', 'rb');
-            file_put_contents(storage_path('app/public/resources/'.md5($request->input('fileName')).$request->input('extend')),$img, FILE_APPEND);
+//            Redis::set($request->input('num'),file_get_contents('php://input', 'rb'));
+            Log::info('num',[$request->input('num')]);
+            return response()->json(['status'=>1,'message' => 'successful']);
+           //file_put_contents(storage_path('app/public/resources/'.md5($request->input('fileName')).$request->input('extend')),$img, FILE_APPEND);
         }catch (\Exception $exception){
-            dump($exception->getMessage());
+            return response()->json(['status'=>1,'message' => $exception->getMessage()]);
         }
 
     }
 
     public function testRedis()
     {
-       Redis::set("aaa",111);
-
-        dump(Redis::get("aaa"));
+//        $setRes = Redis::set('aaa',123456);
+//        dump($setRes);
+//        $getRes = Redis::get(1);
+//        dump($getRes);
     }
 }

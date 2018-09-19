@@ -116,37 +116,48 @@
                     var start = 0;
                     var chunks = [];
                     var buf = new Int8Array(e.target.result);
-
+                    var extendIndex = file.name.lastIndexOf('.');
+                    var suffix = file.name.substr(extendIndex);
                     for (var i = 0; i < Math.ceil(e.total/chunk); i++) {
                         var end = start + chunk;
                         chunks[i] = buf.slice(start,end);
                         start = end;
                     }
-
                     var query = {
-                        fileName: new Date().getTime(),
                         fileSize: e.total,
                         dataSize: chunk,
-                        extend: chunk
+                        fileName: new Date().getTime(),
+                        numSize: Math.ceil(e.total/chunk),
+                        extend: suffix,
+                        upType:upType
                     };
-
                     var queryStr = Object.getOwnPropertyNames(query).map( key => {
                         return key + "=" + query[key];
                 }).join("&");
 
-                    var xhr = new XMLHttpRequest();
-                    // xhr.timeout = 90000;
-
                     for (var j = 0; j < chunks.length;j++){
-                        if (j === 0 || xhr.status === 200){
-                            xhr.open("POST", "/welcome/test?="+queryStr+"&num="+j,false);
-                            xhr.setRequestHeader("X-CSRF-TOKEN","{{ csrf_token()}}");
-                            xhr.send(chunks[j]);
-                            console.log(j);
-                            console.log(xhr.status);
-                        }else {
-                            console.log("失败");
-                        }
+                        var xhr = new XMLHttpRequest();
+                        // xhr.responseType = 'json';
+                            xhr.onreadystatechange = function () {
+                            // xhr.readyState 状态
+                            // 0:XMLHttpRequest对象还没有完成初始化。
+                            // 1:XMLHttpRequest对象开始发送请求。
+                            // 2:XMLHttpRequest对象的请求发送完成。
+                            // 3:XMLHttpRequest对象开始读取服务器的响应。
+                            // 4:XMLHttpRequest对象读取服务器响应结束。
+                            if (xhr.readyState === 4 && xhr.status === 200 ){
+                                console.log('readyState => '+xhr.readyState);
+                                console.log('status => '+xhr.status);
+                                console.log('response => '+ xhr.response.message);
+                            }else {
+                                console.log('readyState => '+xhr.readyState);
+                                console.log('status => '+xhr.status);
+                            }
+                        };
+                        //第三个参数不填写或者true表示异步,false表示同步
+                        xhr.open("POST", "/test/upLoad?="+queryStr+"&num="+j,false);
+                        xhr.setRequestHeader("X-CSRF-TOKEN","{{csrf_token()}}");
+                        xhr.send(chunks[j]);
                     }
                 };
             }
