@@ -116,29 +116,24 @@
                     var start = 0;
                     var chunks = [];
                     var buf = new Int8Array(e.target.result);
-                    var extendIndex = file.name.lastIndexOf('.');
-                    var suffix = file.name.substr(extendIndex);
-                    for (var i = 0; i < Math.ceil(e.total/chunk); i++) {
-                        var end = start + chunk;
-                        chunks[i] = buf.slice(start,end);
-                        start = end;
-                    }
+                    var suffix = file.name.substr(file.name.lastIndexOf('.'));
                     var query = {
                         fileSize: e.total,
                         dataSize: chunk,
                         fileName: new Date().getTime(),
                         numSize: Math.ceil(e.total/chunk),
-                        extend: suffix,
-                        upType:upType
+                        extend: suffix
                     };
                     var queryStr = Object.getOwnPropertyNames(query).map( key => {
                         return key + "=" + query[key];
-                }).join("&");
+                    }).join("&");
 
-                    for (var j = 0; j < chunks.length;j++){
-                        var xhr = new XMLHttpRequest();
-                        // xhr.responseType = 'json';
-                            xhr.onreadystatechange = function () {
+                    var xhr = new XMLHttpRequest();
+                    xhr.responseType = 'json';
+
+                    for (var i = 0; i < Math.ceil(e.total/chunk); i++) {
+                        var end = start + chunk;
+                        xhr.onreadystatechange = function () {
                             // xhr.readyState 状态
                             // 0:XMLHttpRequest对象还没有完成初始化。
                             // 1:XMLHttpRequest对象开始发送请求。
@@ -155,9 +150,11 @@
                             }
                         };
                         //第三个参数不填写或者true表示异步,false表示同步
-                        xhr.open("POST", "/test/upLoad?="+queryStr+"&num="+j,false);
+                        xhr.open("POST", "/test/upLoad?="+queryStr+"&num="+i);
                         xhr.setRequestHeader("X-CSRF-TOKEN","{{csrf_token()}}");
-                        xhr.send(chunks[j]);
+                        xhr.send(buf.slice(start,end));
+                        start = end;
+                        console.log(i);
                     }
                 };
             }
