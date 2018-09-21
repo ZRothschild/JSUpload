@@ -6,6 +6,7 @@ use App\Events\TestEmailEvent;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendEmailJob;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 
@@ -44,9 +45,26 @@ class TestController extends Controller
     public function upLoad(Request $request)
     {
         try{
+            $emptyNum = [];
 //            Redis::set($request->input('num'),file_get_contents('php://input', 'rb'));
-            Log::info('num',[$request->input('num')]);
-            return response()->json(['status'=>1,'message' => 'successful']);
+            $setResa = Redis::zadd(md5($request->input('fileName')),$request->input('num'),$request->input('num'));
+            $count = Redis::ZCOUNT(md5($request->input('fileName')),0,$request->input('numSize'));
+            if ($count > 0){
+                $countNum = 0;
+                while ($countNum <= $request->input('num')){
+                    $rang = Redis::ZRANGEBYSCORE(md5($request->input('fileName')),$countNum,$countNum,'WITHSCORES');
+                    if (empty($rang)){
+                        $emptyNum[] = $countNum;
+                        Log::info('empty =>'.$countNum,$emptyNum);
+                    }
+                    $countNum++;
+                }
+            }
+            Log::info('num',[md5($request->input('fileName')),$request->input('num'),$setResa]);
+            if (!empty($emptyNum)){
+                return response()->json(['status'=>2,'message' => "empty",'data'=>$emptyNum]);
+            }
+            return response()->json(['status'=>1,'message' => 'successful','data'=>[]]);
            //file_put_contents(storage_path('app/public/resources/'.md5($request->input('fileName')).$request->input('extend')),$img, FILE_APPEND);
         }catch (\Exception $exception){
             return response()->json(['status'=>1,'message' => $exception->getMessage()]);
@@ -56,9 +74,12 @@ class TestController extends Controller
 
     public function testRedis()
     {
-//        $setRes = Redis::set('aaa',123456);
-//        dump($setRes);
-//        $getRes = Redis::get(1);
-//        dump($getRes);
+//        $setResa = Redis::zadd('g',1,'a');
+//        $setResb = Redis::zadd('g',2,'b');
+//        $setResc = Redis::zadd('g',3,'c');
+//        $rang = Redis::zRange('b03c628af6e36de51263e25a7dbe1c37',0,-1,'WITHSCORES');
+//        $rang = Redis::ZRANGEBYSCORE('b03c628af6e36de51263e25a7dbe1c37','120','120','WITHSCORES');
+        $count = Redis::ZCOUNT('9d1124dbb7f18b18fc801963d5b2760f',0,120);
+        dump($count);
     }
 }

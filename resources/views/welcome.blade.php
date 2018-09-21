@@ -85,23 +85,21 @@
 
                 obj.addEventListener('drop',function(e){
                     e.preventDefault();
-                    e.stopPropagation();
+                    e.stopPropagation()
                     var ul = document.createElement("ul");
                     var fileList = e.dataTransfer.files;
-                    for(var i=0;i<fileList.length;i++){
-                        var file = fileList[i];
+                    for(let i=0;i<fileList.length;i++){
                         var li = document.createElement('li');
-                        li.innerHTML = '<label id="'+file.name+'">'+file.name+':</label><progress value="0"max="100"></progress>';
+                        li.innerHTML = '<label id="'+fileList[i].name+'">'+fileList[i].name+':</label><progress value="0"max="100"></progress>';
                         ul.appendChild(li);
                     }
                     document.getElementById('container').appendChild(ul);
-                    for(var i=0;i<fileList.length;i++){
-                        var file = fileList[i];
-                        uploadFile(file);
+                    for(let j=0;j<fileList.length;j++){
+                        uploadFile(fileList[j],10);
                     }
                 },false);
             }
-            function uploadFile(file){
+            function uploadFile(file,gap){
                 var chunk = 8*1024*1024;
                 var progress = document.getElementById(file.name).nextSibling;
                 var reader = new FileReader();
@@ -113,50 +111,61 @@
                     progress.value = (e.loaded/e.total) * 100;
                 };
                 reader.onload = function(e){
-                    var start = 0;
-                    var chunks = [];
                     var buf = new Int8Array(e.target.result);
-                    var suffix = file.name.substr(file.name.lastIndexOf('.'));
-                    var query = {
+                    const query = {
                         fileSize: e.total,
                         dataSize: chunk,
                         fileName: new Date().getTime(),
                         numSize: Math.ceil(e.total/chunk),
-                        extend: suffix
+                        extend: file.name.substr(file.name.lastIndexOf('.'))
                     };
-                    var queryStr = Object.getOwnPropertyNames(query).map( key => {
-                        return key + "=" + query[key];
-                    }).join("&");
-
                     var xhr = new XMLHttpRequest();
                     xhr.responseType = 'json';
-
-                    for (var i = 0; i < Math.ceil(e.total/chunk); i++) {
-                        var end = start + chunk;
-                        xhr.onreadystatechange = function () {
-                            // xhr.readyState 状态
-                            // 0:XMLHttpRequest对象还没有完成初始化。
-                            // 1:XMLHttpRequest对象开始发送请求。
-                            // 2:XMLHttpRequest对象的请求发送完成。
-                            // 3:XMLHttpRequest对象开始读取服务器的响应。
-                            // 4:XMLHttpRequest对象读取服务器响应结束。
-                            if (xhr.readyState === 4 && xhr.status === 200 ){
-                                console.log('readyState => '+xhr.readyState);
-                                console.log('status => '+xhr.status);
-                                console.log('response => '+ xhr.response.message);
-                            }else {
-                                console.log('readyState => '+xhr.readyState);
-                                console.log('status => '+xhr.status);
+                    let [i,start,end,k,n] = [0,0,0,gap,gap];
+                    test(n,buf,query,end,i,start,k)
+                };
+            }
+            function test(n,buf,query,end,i,start,k) {
+                var xhr = new XMLHttpRequest();
+                var queryStr = Object.getOwnPropertyNames(query).map( key => {
+                    return key + "=" + query[key];
+                }).join("&");
+                xhr.responseType = 'json';
+                xhr.onreadystatechange = function(){
+                    if (xhr.readyState === 4 && xhr.status === 200 ){
+                        console.log('4444444===>'+xhr.response.message)
+                        if (xhr.response.status === 2){
+                            console.log(xhr.response.data);
+                            xhr.response.data.forEach(function(value,key){
+                                console.log('value => '+value+" key=> "+key);
+                            });
+                        }
+                    }else if (xhr.readyState === 2 && xhr.status === 200) {
+                        console.log('22222222222===>'+xhr.readyState)
+                        n =k + n;
+                        if ( i < query['numSize'] ){
+                            if (i < n){
+                                test(n,buf,query,end,i,start,k);
                             }
-                        };
-                        //第三个参数不填写或者true表示异步,false表示同步
-                        xhr.open("POST", "/test/upLoad?="+queryStr+"&num="+i);
-                        xhr.setRequestHeader("X-CSRF-TOKEN","{{csrf_token()}}");
-                        xhr.send(buf.slice(start,end));
-                        start = end;
-                        console.log(i);
+                        }
+                    }else if (xhr.readyState === 3 && xhr.status === 200){
+                        // console.log('33333333333===>'+xhr.readyState)
+                    }else {
+                        // console.log('1111111111===>'+xhr.readyState)
                     }
                 };
+                while(i < n){
+                    if (i === query['numSize'] ){
+                        return;
+                    }
+                    end = start + query['dataSize'];
+                    xhr.open("POST", "/test/upLoad?="+queryStr+"&num="+i);
+                    xhr.setRequestHeader("X-CSRF-TOKEN","{{csrf_token()}}");
+                    xhr.send(buf.slice(start,end));
+                    start = end;
+                    ++i;
+                    console.log("i等于 "+n+" =>"+i);
+                }
             }
             window.onload = function(){
                 addDNDListener(document.getElementById('container'));
