@@ -122,10 +122,11 @@
                     var xhr = new XMLHttpRequest();
                     xhr.responseType = 'json';
                     let [i,start,end,k,n] = [0,0,0,gap,gap];
-                    test(n,buf,query,end,i,start,k)
+                    uploadChunks(n,buf,query,end,i,start,k)
                 };
             }
-            function test(n,buf,query,end,i,start,k) {
+
+            function uploadChunks(n,buf,query,end,i,start,k) {
                 var xhr = new XMLHttpRequest();
                 var queryStr = Object.getOwnPropertyNames(query).map( key => {
                     return key + "=" + query[key];
@@ -133,19 +134,24 @@
                 xhr.responseType = 'json';
                 xhr.onreadystatechange = function(){
                     if (xhr.readyState === 4 && xhr.status === 200 ){
-                        console.log('4444444===>'+xhr.response.message)
                         if (xhr.response.status === 2){
-                            console.log(xhr.response.data);
-                            xhr.response.data.forEach(function(value,key){
-                                console.log('value => '+value+" key=> "+key);
-                            });
+                            for (let k in  xhr.response.data){
+                                console.log('uploadChunks=> 需要重新上传'+xhr.response.data[k]+" key=> "+k);
+                                uploadChunk(buf,xhr.response.data[k],query)
+                            }
+                        }else if (xhr.response.status === 3){
+                            console.log('uploadChunks=> 视频资源全部完成上传');
+                        }else if (xhr.response.status === 1){
+                            console.log('uploadChunks=> 视频资源部分完成上传');
+                        }else {
+                            console.log('uploadChunks=>'+xhr.response.message);
                         }
                     }else if (xhr.readyState === 2 && xhr.status === 200) {
-                        console.log('22222222222===>'+xhr.readyState)
+                        // console.log('22222222222===>'+xhr.readyState);
                         n =k + n;
                         if ( i < query['numSize'] ){
                             if (i < n){
-                                test(n,buf,query,end,i,start,k);
+                                uploadChunks(n,buf,query,end,i,start,k);
                             }
                         }
                     }else if (xhr.readyState === 3 && xhr.status === 200){
@@ -155,17 +161,47 @@
                     }
                 };
                 while(i < n){
-                    if (i === query['numSize'] ){
-                        return;
-                    }
+                    if (i === query['numSize']) return;
                     end = start + query['dataSize'];
                     xhr.open("POST", "/test/upLoad?="+queryStr+"&num="+i);
-                    xhr.setRequestHeader("X-CSRF-TOKEN","{{csrf_token()}}");
                     xhr.send(buf.slice(start,end));
                     start = end;
                     ++i;
                     console.log("i等于 "+n+" =>"+i);
                 }
+            }
+
+            //单个文件切片上传
+            function uploadChunk (buf,order,query) {
+                var xhr = new XMLHttpRequest();
+                xhr.responseType = 'json';
+                var queryStr = Object.getOwnPropertyNames(query).map( key => {
+                    return key + "=" + query[key];
+                }).join("&");
+                xhr.onreadystatechange = function(){
+                    if (xhr.readyState === 4 && xhr.status === 200 ){
+                        if (xhr.response.status === 2){
+                            for (let k in  xhr.response.data){
+                                console.log('uploadChunk=> 需要重新上传'+xhr.response.data[k]+" key=> "+k);
+                                uploadChunk(buf,xhr.response.data[k],query);
+                            }
+                        }else if (xhr.response.status === 3){
+                            console.log('uploadChunk=> 视频资源全部完成上传');
+                        }else if (xhr.response.status === 1){
+                            console.log('uploadChunk=> 视频资源部分完成上传');
+                        } else {
+                            console.log('uploadChunk=>'+xhr.response.message);
+                        }
+                    }else if (xhr.readyState === 2 && xhr.status === 200) {
+
+                    }else if (xhr.readyState === 3 && xhr.status === 200){
+                        // console.log('33333333333===>'+xhr.readyState)
+                    }else {
+                        // console.log('1111111111===>'+xhr.readyState)
+                    }
+                };
+                xhr.open("POST", "/test/upLoad?="+queryStr+"&num="+order);
+                xhr.send(buf.slice(order*query['dataSize'],(order+1)*query['dataSize']));
             }
             window.onload = function(){
                 addDNDListener(document.getElementById('container'));
